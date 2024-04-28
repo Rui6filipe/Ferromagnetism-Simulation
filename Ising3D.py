@@ -8,7 +8,11 @@ Created on Wed Apr 24 10:22:27 2024
 #Imports
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
+
+# Start time
+start_time = time.time()
 
 
 #Functions
@@ -153,8 +157,6 @@ def sim(size, num_cycles, t, h, grid_option=None, inicial_state=-1, flag=1):
     energy = energy / (size**3)
     return grid, mag_momentum, energy
 
-_, mag_momentum,_ = sim(10, 1000, 5, 0)
-plt.plot(mag_momentum)
 
 
 def changingT(size, num_cycles, h, start_n, temperatures, independent=0):
@@ -235,7 +237,7 @@ def plotting(size, num_cycles, h, start_n, temperatures, independent):
     
     
     
-def changingH(fields, size, num_cycles, t, independent):
+def changingH(fields, size, num_cycles, t, start_n, independent):
     '''
     Performs a simulation on each field value. For each simulation it stores the average magnetic_momentum
     
@@ -255,7 +257,7 @@ def changingH(fields, size, num_cycles, t, independent):
         mag_list[i] = mag_momentum[start_n:].mean()
         i+=1
         
-        if i > (fields.size/2):
+        if i >= (fields.size/2):
             inicial_state = 1
             
         if independent==1:
@@ -265,14 +267,14 @@ def changingH(fields, size, num_cycles, t, independent):
 
 
 
-def hysterisis(fields, size, num_cycles, temperatures, independent):
+def hysterisis(fields, size, num_cycles, temperatures, start_n, independent):
     '''
     Plots the magnetic momentum as a function of the external field, for different temperatures.
     '''
     fig, ax = plt.subplots()
 
     for t in temperatures:
-        mag_list = changingH(fields, size, num_cycles, t, independent)
+        mag_list = changingH(fields, size, num_cycles, t, start_n, independent)
         ax.plot(fields, mag_list, label=f'Temperature {t}')
 
     ax.set_xlabel('Magnetic Field (h)')
@@ -286,18 +288,23 @@ def hysterisis(fields, size, num_cycles, temperatures, independent):
 
 #Meta parameters
 size = 10
-num_cycles = 500
-start_n = 100
+num_cycles = 100
+start_n = 10
 h = 0
 independent = 0
 temperatures = np.arange(1, 8, 0.1) 
-temperaturesh = np.arange(1, 6, 1) 
-array1 = np.arange(-3, 3, 0.5)
-array2 = np.arange(3, -3, -0.5)
+temperaturesh = np.arange(2, 6, 1) 
+array1 = np.arange(-4, 4, 0.5)
+array2 = np.arange(4, -4, -0.5)
 fields = np.concatenate((array1, array2))
 
 #Run and Plot
+_, mag_momentum,_ = sim(10, 1000, 5, 0)
+plt.plot(mag_momentum)
 plotting(size, num_cycles, h, start_n, temperatures, independent)
-hysterisis(fields, size, num_cycles, temperaturesh, independent)
+hysterisis(fields, size, num_cycles, temperaturesh, start_n, independent)
 
 
+# End time
+end_time = time.time()
+print("Runtime:", end_time - start_time, "seconds")
