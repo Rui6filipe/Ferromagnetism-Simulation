@@ -30,7 +30,7 @@ def transitionFunctionValues(t,h):
     '''
     delta = []
     for d in range(-6,8,2):
-        delta.append([d-h, d+h]) #delta = [[j + i * h for i in range(-1, 3, 2)] for j in range(-4, 6, 2)]
+        delta.append([d-h, d+h])
     
     values = []
     for n in delta:
@@ -42,7 +42,7 @@ def transitionFunctionValues(t,h):
             j = 1
         else:
             j = np.exp(-2*n[1]/t)
-        values.append([i,j]) #values = [[1 if elem <= 0 else np.exp(-2 * elem / t) for elem in row] for row in deltaE]
+        values.append([i,j]) 
     
     return np.array(values)
 
@@ -293,14 +293,14 @@ start_n = 10
 h = 0
 independent = 0
 temperatures = np.arange(1, 8, 0.1) 
-temperaturesh = np.arange(2, 6, 1) 
+temperaturesh = np.arange(2, 7, 1) 
 array1 = np.arange(-4, 4, 0.5)
 array2 = np.arange(4, -4, -0.5)
 fields = np.concatenate((array1, array2))
 
 #Run and Plot
-_, mag_momentum,_ = sim(10, 1000, 5, 0)
-plt.plot(mag_momentum)
+#_, mag_momentum,_ = sim(10, 1000, 5, 0)
+#plt.plot(mag_momentum)
 plotting(size, num_cycles, h, start_n, temperatures, independent)
 hysterisis(fields, size, num_cycles, temperaturesh, start_n, independent)
 

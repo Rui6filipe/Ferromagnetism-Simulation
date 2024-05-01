@@ -4,7 +4,8 @@ Created on Wed Apr 24 10:22:27 2024
 
 @author: ruira
 """
-    
+
+# %%   
 #Imports
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,7 +17,8 @@ import multiprocessing as mp
 start_time = time.time()
 
 
-#Functions
+
+# %%
 def transitionFunctionValues(t,h):
     '''
     Calculates all the possible values for the transition function based on the spin of the central point and
@@ -37,10 +39,7 @@ def transitionFunctionValues(t,h):
     return np.array(values)
 
 
-
-
-
-
+# %%
 def init(size, inicial_state=-1):
     '''
     Initializes the square grid
@@ -61,8 +60,8 @@ def init(size, inicial_state=-1):
 
 
 
-
-def cycle(grid, size, t, h, w):
+# %%
+def cycle(grid, size, w):
     '''
     Does a full cycle, meaning it iterates through all the points in the grid and either flips or not based on the
     probability of fliping (transition function) given the spins of the neibhours.
@@ -76,8 +75,6 @@ def cycle(grid, size, t, h, w):
         
     grid : our grid
     size : size of the grid
-    t: reduced temperature
-    h: reduced external magnetic field
     w: transition function values
 
     Returns: grid after cycle
@@ -96,38 +93,8 @@ def cycle(grid, size, t, h, w):
 
 
 
-def cycle_parallel(args):
-    """
-    Worker function for parallel execution of the cycle function.
-    """
-    grid, x, y, z, size, t, h, w = args
-    spin = grid[x, y, z]
-    sum_neib = (grid[(x+1) % size, y, z] + grid[x-1, y, z] + grid[x, (y+1) % size, z] + grid[x, y-1, z]
-                + grid[x, y, (z+1) % size] + grid[x, y, z-1]) * spin
-
-    if np.random.random() < w[int(sum_neib / 2 + 3)][int(spin / 2 + 1 / 2)]:
-        grid[x, y, z] = -spin
-
-    return grid
-
-
-def cycle_parallel_grid(grid, size, t, h, w):
-    """
-    Parallel version of the cycle function.
-    """
-    
-    args_list = [(grid, x, y, z, size, t, h, w) for x in range(size) for y in range(size) for z in range(size)]
-
-    pool = mp.Pool(processes=4)
-    results = pool.map(cycle_parallel, args_list)
-
-    return results
-    
-    
-
-
-
-def sim(size, num_cycles, t, h, grid_option=None, inicial_state=-1, flag=1):
+# %%
+def sim(size, num_cycles, t, h, inicial_state=-1, flag=1):
     '''
     Performs n cycles and calculates the magnetic momentum and energy in each, storinging them.
     Calculates the energy by creating a grid where each point contains the sum_neib of that point in the original grid,
@@ -137,7 +104,6 @@ def sim(size, num_cycles, t, h, grid_option=None, inicial_state=-1, flag=1):
     num_cycles : number of cycles we do
     t : reduced temperature
     h : reduced external magnetic field
-    grid option: if we want to start the grid in the previous configuration when changing temperature
     inicial_state: inicial spin orientation
     flag: needed because we cant properly see the hysteresis cycle if working with absolute values
     
@@ -146,10 +112,7 @@ def sim(size, num_cycles, t, h, grid_option=None, inicial_state=-1, flag=1):
     Returns: final grid, the array containing the magnetic momenta in each cycle, and the array containing
     the total energy in each cycle
     '''
-    if grid_option is not None:
-        grid = grid_option
-    else:
-        grid = init(size, inicial_state)
+    grid = init(size, inicial_state)
         
     w = transitionFunctionValues(t, h)
     mag_momentum = np.zeros(num_cycles)
@@ -157,7 +120,7 @@ def sim(size, num_cycles, t, h, grid_option=None, inicial_state=-1, flag=1):
     size_cubed = size**3
     
     for i in range(num_cycles):
-        grid = cycle_parallel_grid(grid, size, t, h, w)
+        grid = cycle(grid, size, w)
         if (flag==1):
             mag_momentum[i] = abs(2*np.sum(grid==1) - size_cubed)
         else:
@@ -175,7 +138,10 @@ def sim(size, num_cycles, t, h, grid_option=None, inicial_state=-1, flag=1):
 
 
 
-def changingT(size, num_cycles, h, start_n, temperatures, independent=0):
+# %%
+# For first graph
+
+def changingT(size, num_cycles, h, start_n, temperatures): # Not being used
     '''
     Performs a simulation on each temperature value. For each simulation it stores
     the relevant variables in an array (average magnetic_momentum, average energy, susceptibility, heat capacity)
@@ -185,8 +151,7 @@ def changingT(size, num_cycles, h, start_n, temperatures, independent=0):
     h : reduced external magnetic field
     start_n : number of cycles we reject to calculate the mean
     temperatures: array containing the temperatures to use
-    indepedent: if 1 makes it so that the starting grid on a new temperature is the last grid from previous temperature
-
+ 
     Changes for 3D: size**3
 
     Returns: lists of magnetic_momentum, energy, susceptibility, heat capacity at each temperature
@@ -197,13 +162,11 @@ def changingT(size, num_cycles, h, start_n, temperatures, independent=0):
     sus_list = np.zeros(points)
     energy_list = np.zeros(points)
     cap_list = np.zeros(points)
-    
-    grid_option = None
     size_cubed = size**3
     
     i = 0
     for t in temperatures:
-        grid, mag_momentum, energy = sim(size, num_cycles, t, h, grid_option) 
+        grid, mag_momentum, energy = sim(size, num_cycles, t, h) 
         
         mag_momentum_m = mag_momentum[start_n:].mean()
         energy_m = energy[start_n:].mean()
@@ -215,20 +178,55 @@ def changingT(size, num_cycles, h, start_n, temperatures, independent=0):
         sus_list[i] = sus
         cap_list[i] = cap
         i+=1
-        
-        if independent==1:
-            grid_option = grid
     
     return mag_list, energy_list, sus_list, cap_list
  
- 
+def simulate_temperature(args):
+    '''
+    Performs a simulation a given set of arguments. Stores the relevant variables in arrays 
+    (average magnetic_momentum, average energy, susceptibility, heat capacity)
+    
+    size : grid size
+    num_cycles : number of cycles per temperature
+    h : reduced external magnetic field
+    start_n : number of cycles we reject to calculate the mean
+    temperature: reduced temperature
+   
+    Returns: lists of magnetic_momentum, energy, susceptibility, heat capacity at the given temperature
+    '''
+    size, num_cycles, h, start_n, temperature = args
+    size_cubed = size ** 3
+    
+    grid, mag_momentum, energy = sim(size, num_cycles, temperature, h)
+    
+    mag_momentum_m = mag_momentum[start_n:].mean()
+    energy_m = energy[start_n:].mean()
+    sus = (mag_momentum.var() * size_cubed) / temperature
+    cap = energy.var() / (temperature ** 2 * size_cubed)
+    
+    return mag_momentum_m, energy_m, sus, cap
 
 
-def plotting(size, num_cycles, h, start_n, temperatures, independent):
+def changingT_parallel(size, num_cycles, h, start_n, temperatures):
     '''
-    Plots the relevant variables
+    Parallel execution of simulate temperature function for the reduced temperatures in the array temperatures
+    
+    Returns the arrays containing the relevant variables for each temperature
     '''
-    mag_list, energy_list, sus_list, cap_list = changingT(size, num_cycles, h, start_n, temperatures, independent)
+    pool = mp.Pool()  
+    results = pool.map(simulate_temperature, [(size, num_cycles, h, start_n, t) for t in temperatures])
+    mag_list, energy_list, sus_list, cap_list = zip(*results)
+    pool.close()
+    pool.join()
+    
+    return np.array(mag_list), np.array(energy_list), np.array(sus_list), np.array(cap_list)
+
+
+def plotting(size, num_cycles, h, start_n, temperatures):
+    '''
+    Plots the relevant variables for each temperature.
+    '''
+    mag_list, energy_list, sus_list, cap_list = changingT_parallel(size, num_cycles, h, start_n, temperatures)
     
     fig, axs = plt.subplots(2, 2)
     labels = ['magnetic momentum', 'energy', 'magnetic susceptibility', 'heat capacity']
@@ -240,79 +238,141 @@ def plotting(size, num_cycles, h, start_n, temperatures, independent):
         ax.set_ylabel(label)
     
     plt.tight_layout()
-    plt.show()
+    #plt.show()
     
     
     
     
-def changingH(fields, size, num_cycles, t, start_n, independent):
+    
+    
+    
+# %% 
+# For second graph
+def changingH(fields, size, num_cycles, temperatures, start_n): # Not being used
     '''
-    Performs a simulation on each field value. For each simulation it stores the average magnetic_momentum
+    Performs a simulation on each field value for different temperatures. For each simulation, 
+    it stores the average magnetic_momentum. 
+    Goes from strong negative fields to strong positive fields with the starting spins down. 
+    Goes from strong positive to strong negative with starting spins up
     
     fields : array containing the fields to use
-    indepedent: if 1 makes it so that the starting grid on a new field is the last grid from previous field
-
-    Returns: list of magnetic momenta for the different fields
+    temperatures: array containing the temperatures to simulate
+  
+    Returns: list of magnetic momenta for the different fields and temperatures
     '''
     points = fields.size
-    mag_list = np.zeros(points)
-    grid_option = None
-    i = 0
-    inicial_state = -1
-    
-    for h in fields:
-        grid, mag_momentum, energy = sim(size, num_cycles, t, h, grid_option, inicial_state, 0) 
-        mag_list[i] = mag_momentum[start_n:].mean()
-        i+=1
+    mag_lists = [] 
+
+    for t in temperatures:
+        mag_list = np.zeros(points)
+        i = 0
+        inicial_state = -1
+        for h in fields:
+            grid, mag_momentum, energy = sim(size, num_cycles, t, h, inicial_state, 0) 
+            mag_list[i] = mag_momentum[start_n:].mean()
+            i += 1
+
+            if i >= (fields.size/2):
+                inicial_state = 1
         
-        if i >= (fields.size/2):
-            inicial_state = 1
-            
-        if independent==1:
-            grid_option = grid
+        mag_lists.append(mag_list)
+    
+    return np.array(mag_lists)
+
+
+def simulate_field(args):
+    '''
+    Performs a simulation for given t and h values. Stores the average magnetic_momentum
+    
+    size : grid size
+    num_cycles : number of cycles per temperature
+    t: reduced temperature
+    h : reduced external magnetic field
+    start_n : number of cycles we reject to calculate the mean
+    inicial_state: inicial spin orientation
+  
+    Returns: list of magnetic momenta for the different fields and temperatures
+    '''
+    size, num_cycles, t, h, start_n, inicial_state = args
+    grid, mag_momentum,_ = sim(size, num_cycles, t, h, inicial_state, 0)
+    mag_list = mag_momentum[start_n:].mean()
     
     return mag_list
 
 
 
-def hysterisis(fields, size, num_cycles, temperatures, start_n, independent):
+def changingH_parallel(fields, size, num_cycles, temperatures, start_n):
+    '''
+    Parallel execution of the simulate_field function for the t's and h's in the arrays temperatures and fields.
+    
+    Goes from strong negative fields to strong positive fields with the starting spins down. 
+    Goes from strong positive to strong negative with starting spins up
+    
+    fields : array containing the fields to use
+    temperatures: array containing the temperatures to simulate
+
+    Returns: list of magnetic momenta list for each (fields, temperature) pair
+    '''
+    points = fields.size
+    half_len = len(fields) // 2
+    params_list = [
+        (size, num_cycles, t, h, start_n, -1 if idx < half_len else 1)
+        for t in temperatures
+        for idx, h in enumerate(fields)]
+
+    pool = mp.Pool()  
+    results = pool.map(simulate_field, params_list)
+    pool.close()
+    pool.join()
+    mag_lists = np.array(results).reshape(len(temperatures), points)
+    
+    return mag_lists
+
+
+
+def hysterisis(fields, size, num_cycles, temperatures, start_n):
     '''
     Plots the magnetic momentum as a function of the external field, for different temperatures.
     '''
     fig, ax = plt.subplots()
 
-    for t in temperatures:
-        mag_list = changingH(fields, size, num_cycles, t, start_n, independent)
+    mag_lists = changingH_parallel(fields, size, num_cycles, temperatures, start_n)
+    for i, t in enumerate(temperatures):
+        mag_list = mag_lists[i]
         ax.plot(fields, mag_list, label=f'Temperature {t}')
 
     ax.set_xlabel('Magnetic Field (h)')
     ax.set_ylabel('Magnetic Momentum')
     ax.legend()
     plt.tight_layout()
-    plt.show()
+    #plt.show()
 
 
+ 
 
 
-#Meta parameters
-size = 10
-num_cycles = 100
-start_n = 10
-h = 0
-independent = 0
-temperatures = np.arange(1, 8, 0.1) 
-temperaturesh = np.arange(2, 6, 1) 
-array1 = np.arange(-4, 4, 0.5)
-array2 = np.arange(4, -4, -0.5)
-fields = np.concatenate((array1, array2))
-
-#Run and Plot
-_, mag_momentum,_ = sim(10, 1000, 5, 0)
-plt.plot(mag_momentum)
-plotting(size, num_cycles, h, start_n, temperatures, independent)
-hysterisis(fields, size, num_cycles, temperaturesh, start_n, independent)
-
-
-# End time
-end_time = time.time()
-print("Runtime:", end_time - start_time, "seconds")
+# %%
+# RUN
+if __name__ == "__main__":
+    
+    #Meta parameters
+    size = 20
+    num_cycles = 100
+    start_n = 10
+    h = 0
+    num_processes = 8
+    temperatures = np.arange(0.1, 9, 0.1) 
+    temperatures_h = np.arange(2, 7, 1) 
+    array1 = np.arange(-4, 4, 0.5)
+    array2 = np.arange(4, -4, -0.5)
+    fields = np.concatenate((array1, array2))
+    
+    #Run and Plot
+    #_, mag_momentum,_ = sim(size, num_cycles, 5, 0)
+    #plt.plot(mag_momentum)
+    plotting(size, num_cycles, h, start_n, temperatures)
+    hysterisis(fields, size, num_cycles, temperatures_h, start_n)
+    
+    # End time
+    end_time = time.time()
+    print("Runtime:", end_time - start_time, "seconds")
