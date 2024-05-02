@@ -105,7 +105,8 @@ def sim(size, num_cycles, t, h, inicial_state=-1, flag=1):
     t : reduced temperature
     h : reduced external magnetic field
     inicial_state: inicial spin orientation
-    flag: needed because we cant properly see the hysteresis cycle if working with absolute values
+    flag: needed because we cant properly see the hysteresis cycle if working with absolute values and 
+    when doing the hysteresis we are not interested in energies.
     
     Change for 3D: size**3. Roll the grid in 3rd dimension
     
@@ -123,14 +124,16 @@ def sim(size, num_cycles, t, h, inicial_state=-1, flag=1):
         grid = cycle(grid, size, w)
         if (flag==1):
             mag_momentum[i] = abs(2*np.sum(grid==1) - size_cubed)
+            
+            sum_neib = np.roll(grid, 1, axis=0) + np.roll(grid, -1, axis=0) + np.roll(grid, 1, axis=1) + \
+                        np.roll(grid, -1, axis=1) + np.roll(grid, 1, axis=2) + np.roll(grid, -1, axis=2)
+                        
+            e = -0.5*sum_neib*grid - grid*h
+            energy[i] = np.sum(e)
+        
+        
         else:
             mag_momentum[i] = 2*np.sum(grid==1) - size_cubed
-        
-        sum_neib = np.roll(grid, 1, axis=0) + np.roll(grid, -1, axis=0) + np.roll(grid, 1, axis=1) + \
-                    np.roll(grid, -1, axis=1) + np.roll(grid, 1, axis=2) + np.roll(grid, -1, axis=2)
-                    
-        e = -0.5*sum_neib*grid - grid*h
-        energy[i] = np.sum(e)
         
     mag_momentum /= size_cubed
     energy /= size_cubed
@@ -201,10 +204,11 @@ def simulate_temperature(args):
     
     mag_momentum_m = mag_momentum[start_n:].mean()
     energy_m = energy[start_n:].mean()
-    sus = (mag_momentum.var() * size_cubed) / temperature
-    cap = energy.var() / (temperature ** 2 * size_cubed)
+    sus = (mag_momentum[start_n:].var() * size_cubed) / temperature
+    cap = energy[start_n:].var() / (temperature ** 2 * size_cubed)
     
     return mag_momentum_m, energy_m, sus, cap
+
 
 
 def changingT_parallel(size, num_cycles, h, start_n, temperatures):
@@ -220,6 +224,7 @@ def changingT_parallel(size, num_cycles, h, start_n, temperatures):
     pool.join()
     
     return np.array(mag_list), np.array(energy_list), np.array(sus_list), np.array(cap_list)
+
 
 
 def plotting(size, num_cycles, h, start_n, temperatures):
@@ -294,7 +299,7 @@ def simulate_field(args):
     Returns: list of magnetic momenta for the different fields and temperatures
     '''
     size, num_cycles, t, h, start_n, inicial_state = args
-    grid, mag_momentum,_ = sim(size, num_cycles, t, h, inicial_state, 0)
+    _, mag_momentum,_ = sim(size, num_cycles, t, h, inicial_state, 0)
     mag_list = mag_momentum[start_n:].mean()
     
     return mag_list
@@ -348,7 +353,7 @@ def hysterisis(fields, size, num_cycles, temperatures, start_n):
     #plt.show()
 
 
- 
+
 
 
 # %%
@@ -356,15 +361,15 @@ def hysterisis(fields, size, num_cycles, temperatures, start_n):
 if __name__ == "__main__":
     
     #Meta parameters
-    size = 20
+    size = 10
     num_cycles = 100
     start_n = 10
     h = 0
     num_processes = 8
     temperatures = np.arange(0.1, 9, 0.1) 
     temperatures_h = np.arange(2, 7, 1) 
-    array1 = np.arange(-4, 4, 0.5)
-    array2 = np.arange(4, -4, -0.5)
+    array1 = np.arange(-4, 4.5, 0.5)
+    array2 = np.arange(4, -4.5, -0.5)
     fields = np.concatenate((array1, array2))
     
     #Run and Plot

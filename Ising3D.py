@@ -48,8 +48,6 @@ def transitionFunctionValues(t,h):
 
 
 
-
-
 def init(size, inicial_state=-1):
     '''
     Initializes the square grid
@@ -138,9 +136,9 @@ def sim(size, num_cycles, t, h, grid_option=None, inicial_state=-1, flag=1):
         grid = cycle(grid, size, t, h, w)
         
         if (flag==1):
-            mag_momentum[i] = abs(2*np.sum(grid==1) - size**3)
+            mag_momentum[i] = abs(np.sum(grid))
         else:
-            mag_momentum[i] = 2*np.sum(grid==1) - size**3
+            mag_momentum[i] = np.sum(grid)
         
         top = np.roll(grid, 1, axis=0)
         bottom = np.roll(grid, -1, axis=0)
@@ -190,8 +188,8 @@ def changingT(size, num_cycles, h, start_n, temperatures, independent=0):
         
         mag_momentum_m = mag_momentum[start_n:].mean()
         energy_m = energy[start_n:].mean()
-        sus = (mag_momentum.var() * size**3) / t 
-        cap = energy.var() / (t**2 * size**3)
+        sus = (mag_momentum[start_n:].var() * size**3) / t 
+        cap = energy[start_n:].var() / (t**2 * size**3)
         
         mag_list[i] = mag_momentum_m
         energy_list[i] = energy_m
@@ -237,7 +235,7 @@ def plotting(size, num_cycles, h, start_n, temperatures, independent):
     
     
     
-def changingH(fields, size, num_cycles, t, start_n, independent):
+def changingH(fields, size, num_cycles, temperatures, start_n, independent):
     '''
     Performs a simulation on each field value. For each simulation it stores the average magnetic_momentum
     
@@ -247,23 +245,26 @@ def changingH(fields, size, num_cycles, t, start_n, independent):
     Returns: list of magnetic momenta for the different fields
     '''
     points = fields.size
-    mag_list = np.zeros(points)
-    grid_option = None
-    i = 0
-    inicial_state = -1
+    mag_lists = [] 
     
-    for h in fields:
-        grid, mag_momentum, energy = sim(size, num_cycles, t, h, grid_option, inicial_state, 0) 
-        mag_list[i] = mag_momentum[start_n:].mean()
-        i+=1
-        
-        if i >= (fields.size/2):
-            inicial_state = 1
+    for t in temperatures:
+        mag_list = np.zeros(points)
+        grid_option = None
+        i = 0
+        inicial_state = -1
+        for h in fields:
+            grid, mag_momentum, energy = sim(size, num_cycles, t, h, grid_option, inicial_state, 0) 
+            mag_list[i] = mag_momentum[start_n:].mean()
+            i+=1
             
-        if independent==1:
-            grid_option = grid
-    
-    return mag_list
+            if i >= (fields.size/2):
+                inicial_state = 1
+            if independent==1:
+                grid_option = grid
+                
+        mag_lists.append(mag_list)
+        
+    return np.array(mag_lists)
 
 
 
@@ -272,9 +273,10 @@ def hysterisis(fields, size, num_cycles, temperatures, start_n, independent):
     Plots the magnetic momentum as a function of the external field, for different temperatures.
     '''
     fig, ax = plt.subplots()
-
-    for t in temperatures:
-        mag_list = changingH(fields, size, num_cycles, t, start_n, independent)
+    
+    mag_lists = changingH(fields, size, num_cycles, temperatures, start_n, independent)
+    for i, t in enumerate(temperatures):
+        mag_list = mag_lists[i]
         ax.plot(fields, mag_list, label=f'Temperature {t}')
 
     ax.set_xlabel('Magnetic Field (h)')
@@ -294,8 +296,8 @@ h = 0
 independent = 0
 temperatures = np.arange(1, 8, 0.1) 
 temperaturesh = np.arange(2, 7, 1) 
-array1 = np.arange(-4, 4, 0.5)
-array2 = np.arange(4, -4, -0.5)
+array1 = np.arange(-4, 4.5, 0.5)
+array2 = np.arange(4, -4.5, -0.5)
 fields = np.concatenate((array1, array2))
 
 #Run and Plot
