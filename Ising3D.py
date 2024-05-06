@@ -229,7 +229,7 @@ def plotting(size, num_cycles, h, start_n, temperatures, independent):
     axs[1,1].set_ylabel('heat capacity')
     
     plt.tight_layout()
-    #plt.show()
+    plt.show()
     
     
     
@@ -282,7 +282,7 @@ def hysterisis(fields, size, num_cycles, temperatures, start_n, independent):
     ax.set_ylabel('Magnetic Momentum')
     ax.legend()
     plt.tight_layout()
-    #plt.show()
+    plt.show()
 
 
 

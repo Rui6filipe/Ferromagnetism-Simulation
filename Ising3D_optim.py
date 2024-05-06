@@ -224,8 +224,6 @@ def changingT_parallel(size, num_cycles, h, start_n, temperatures):
     pool = mp.Pool()  
     results = pool.map(simulate_temperature, [(size, num_cycles, h, start_n, t) for t in temperatures])
     mag_list, energy_list, sus_list, cap_list = zip(*results)
-    pool.close()
-    pool.join()
     
     return np.array(mag_list), np.array(energy_list), np.array(sus_list), np.array(cap_list)
 
@@ -236,6 +234,11 @@ def plotting(size, num_cycles, h, start_n, temperatures):
     Plots the relevant variables for each temperature.
     '''
     mag_list, energy_list, sus_list, cap_list = changingT_parallel(size, num_cycles, h, start_n, temperatures)
+    
+    
+    index = np.argmax(sus_list)
+    curie_t = temperatures[index]
+    print("Curie Temperature:", curie_t)
     
     fig, axs = plt.subplots(2, 2)
     labels = ['magnetic momentum', 'energy', 'magnetic susceptibility', 'heat capacity']
@@ -330,9 +333,7 @@ def changingH_parallel(fields, size, num_cycles, temperatures, start_n):
 
     pool = mp.Pool()  
     results = pool.map(simulate_field, params_list)
-    pool.close()
-    pool.join()
-    mag_lists = np.array(results).reshape(len(temperatures), points)
+    mag_lists = np.array(results).reshape(temperatures.size, points)
     
     return mag_lists
 
