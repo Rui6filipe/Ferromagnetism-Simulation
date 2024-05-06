@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 import multiprocessing as mp
+from numba import jit
 
 
 # Start time
@@ -61,6 +62,7 @@ def init(size, inicial_state=-1):
 
 
 # %%
+@jit(nopython=True)
 def cycle(grid, size, w):
     '''
     Does a full cycle, meaning it iterates through all the points in the grid and either flips or not based on the
@@ -124,6 +126,7 @@ def sim(size, num_cycles, t, h, inicial_state=-1, flag=1):
         grid = cycle(grid, size, w)
         if (flag==1):
             mag_momentum[i] = abs(2*np.sum(grid==1) - size_cubed)
+            #mag_momentum[i] = abs(np.sum(grid))
             
             sum_neib = np.roll(grid, 1, axis=0) + np.roll(grid, -1, axis=0) + np.roll(grid, 1, axis=1) + \
                         np.roll(grid, -1, axis=1) + np.roll(grid, 1, axis=2) + np.roll(grid, -1, axis=2)
@@ -134,6 +137,7 @@ def sim(size, num_cycles, t, h, inicial_state=-1, flag=1):
         
         else:
             mag_momentum[i] = 2*np.sum(grid==1) - size_cubed
+            #mag_momentum[i] = np.sum(grid)
         
     mag_momentum /= size_cubed
     energy /= size_cubed
@@ -320,10 +324,9 @@ def changingH_parallel(fields, size, num_cycles, temperatures, start_n):
     '''
     points = fields.size
     half_len = len(fields) // 2
-    params_list = [
-        (size, num_cycles, t, h, start_n, -1 if idx < half_len else 1)
-        for t in temperatures
-        for idx, h in enumerate(fields)]
+    params_list = [(size, num_cycles, t, h, start_n, -1 if idx < half_len else 1)
+                   for t in temperatures
+                   for idx, h in enumerate(fields)]
 
     pool = mp.Pool()  
     results = pool.map(simulate_field, params_list)
@@ -362,7 +365,7 @@ if __name__ == "__main__":
     
     #Meta parameters
     size = 10
-    num_cycles = 100
+    num_cycles = 1000
     start_n = 10
     h = 0
     num_processes = 8
