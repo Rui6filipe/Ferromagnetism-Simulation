@@ -147,47 +147,6 @@ def sim(size, num_cycles, t, h, inicial_state=-1, flag=1):
 
 # %%
 # For first graph
-
-def changingT(size, num_cycles, h, start_n, temperatures): # Not being used
-    '''
-    Performs a simulation on each temperature value. For each simulation it stores
-    the relevant variables in an array (average magnetic_momentum, average energy, susceptibility, heat capacity)
-    
-    size : grid size
-    num_cycles : number of cycles per temperature
-    h : reduced external magnetic field
-    start_n : number of cycles we reject to calculate the mean
-    temperatures: array containing the temperatures to use
- 
-    Changes for 3D: size**3
-
-    Returns: lists of magnetic_momentum, energy, susceptibility, heat capacity at each temperature
-    '''
- 
-    points = temperatures.size
-    mag_list = np.zeros(points)
-    sus_list = np.zeros(points)
-    energy_list = np.zeros(points)
-    cap_list = np.zeros(points)
-    size_cubed = size**3
-    
-    i = 0
-    for t in temperatures:
-        grid, mag_momentum, energy = sim(size, num_cycles, t, h) 
-        
-        mag_momentum_m = mag_momentum[start_n:].mean()
-        energy_m = energy[start_n:].mean()
-        sus = (mag_momentum.var() * size_cubed) / t 
-        cap = energy.var() / (t**2 * size_cubed)
-        
-        mag_list[i] = mag_momentum_m
-        energy_list[i] = energy_m
-        sus_list[i] = sus
-        cap_list[i] = cap
-        i+=1
-    
-    return mag_list, energy_list, sus_list, cap_list
- 
 def simulate_temperature(args):
     '''
     Performs a simulation a given set of arguments. Stores the relevant variables in arrays 
@@ -238,7 +197,7 @@ def plotting(size, num_cycles, h, start_n, temperatures):
     
     index = np.argmax(sus_list)
     curie_t = temperatures[index]
-    print("Curie Temperature:", curie_t)
+    print("Curie Temperature:", round(curie_t,1))
     
     fig, axs = plt.subplots(2, 2)
     labels = ['magnetic momentum', 'energy', 'magnetic susceptibility', 'heat capacity']
@@ -250,7 +209,7 @@ def plotting(size, num_cycles, h, start_n, temperatures):
         ax.set_ylabel(label)
     
     plt.tight_layout()
-    #plt.show()
+    plt.show()
     
     
     
@@ -260,38 +219,6 @@ def plotting(size, num_cycles, h, start_n, temperatures):
     
 # %% 
 # For second graph
-def changingH(fields, size, num_cycles, temperatures, start_n): # Not being used
-    '''
-    Performs a simulation on each field value for different temperatures. For each simulation, 
-    it stores the average magnetic_momentum. 
-    Goes from strong negative fields to strong positive fields with the starting spins down. 
-    Goes from strong positive to strong negative with starting spins up
-    
-    fields : array containing the fields to use
-    temperatures: array containing the temperatures to simulate
-  
-    Returns: list of magnetic momenta for the different fields and temperatures
-    '''
-    points = fields.size
-    mag_lists = [] 
-
-    for t in temperatures:
-        mag_list = np.zeros(points)
-        i = 0
-        inicial_state = -1
-        for h in fields:
-            grid, mag_momentum, energy = sim(size, num_cycles, t, h, inicial_state, 0) 
-            mag_list[i] = mag_momentum[start_n:].mean()
-            i += 1
-
-            if i >= (fields.size/2):
-                inicial_state = 1
-        
-        mag_lists.append(mag_list)
-    
-    return np.array(mag_lists)
-
-
 def simulate_field(args):
     '''
     Performs a simulation for given t and h values. Stores the average magnetic_momentum
@@ -354,7 +281,7 @@ def hysterisis(fields, size, num_cycles, temperatures, start_n):
     ax.set_ylabel('Magnetic Momentum')
     ax.legend()
     plt.tight_layout()
-    #plt.show()
+    plt.show()
 
 
 

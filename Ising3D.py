@@ -210,6 +210,11 @@ def plotting(size, num_cycles, h, start_n, temperatures, independent):
     '''
     
     mag_list, energy_list, sus_list, cap_list = changingT(size, num_cycles, h, start_n, temperatures, independent)
+    
+    index = np.argmax(sus_list)
+    curie_t = temperatures[index]
+    print("Curie Temperature:", round(curie_t,1))
+    
     fig, axs = plt.subplots(2,2)
      
     axs[0,0].plot(temperatures, mag_list)
