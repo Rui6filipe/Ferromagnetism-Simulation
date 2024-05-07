@@ -180,7 +180,7 @@ def changingT_parallel(size, num_cycles, h, start_n, temperatures):
     
     Returns the arrays containing the relevant variables for each temperature
     '''
-    pool = mp.Pool()  
+    pool = mp.Pool(processes=num_processes)  
     results = pool.map(simulate_temperature, [(size, num_cycles, h, start_n, t) for t in temperatures])
     mag_list, energy_list, sus_list, cap_list = zip(*results)
     
@@ -258,7 +258,7 @@ def changingH_parallel(fields, size, num_cycles, temperatures, start_n):
                    for t in temperatures
                    for idx, h in enumerate(fields)]
 
-    pool = mp.Pool()  
+    pool = mp.Pool(processes=num_processes)  
     results = pool.map(simulate_field, params_list)
     mag_lists = np.array(results).reshape(temperatures.size, points)
     
