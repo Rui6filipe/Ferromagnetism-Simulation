@@ -18,10 +18,8 @@ import time
 def transitionFunctionValues(t, h):
     '''
     Calculates all the possible values for the transition function based on 
-    the spin of the central point and the spins of its four neighbours. 
-    Stores them in an array
-    
-    Changes for 3D: sum_neib can go from -6 to 6
+    the spin of the central point and the spins of its four neighbours;
+    stores them into an array.
    
     t : reduced temperature
     h : reduced external magnetic field
@@ -47,14 +45,12 @@ def transitionFunctionValues(t, h):
 # %%
 def init(size, initial_state=-1):
     '''
-    Initializes the square grid
+    Initializes the 3-dimensional grid
     
     size : size of the grid
-    flag : -1 to start with all spins down, 1 to start with spins up
-    
-    Changes for 3D: grid has 3 dimensions
+    initial_state : -1 to start with all spins down, 1 to start with spins up
 
-    Returns: grid with dimension size**2
+    Returns: grid with dimension size**3
     '''
     if initial_state == -1:
         grid = np.full((size,size,size),-1)
@@ -70,20 +66,18 @@ def init(size, initial_state=-1):
 def cycle(grid, size, w):
     '''
     Does a full cycle, meaning it iterates through all the points in the grid 
-    and either flips or not based on the probability of fliping (transition 
-    function) given the spins of the neibhours.
+    and either flips each spin or not based on the probability of flipping 
+    (transition function) given the spins of the neighbors.
     
-    (x+1)%10 is equal to x for x=1:8, equal to 0 for x=9.
-    (sum_neib/2 + 3) maps from -6,-4,-2,0,2,4,6 to 0,1,2,3,4,5,6 so that 
-    we acess the transitionFunctionValues array in the correct spot.
-    (spin/2 + 1/2) maps from -1,1 to 0,1 so that we acess the right position 
-    inside the spot we acessed with sum_neib
-     
-    Changes for 3D: iterate through z. Change the mapping function sum_neib
+    (x+1)%10 is equal to x for x=1:8 and equal to 0 for x=9.
+    (sum_neib/2 + 3) maps from -6,-4,-2,0,2,4,6 to 0,1,2,3,4,5,6 and
+    (spin/2 + 1/2) maps from -1,1 to 0,1 ; this way, we pass the correct 
+    indexes to the w array, which contains the possible values for the 
+    transition function.
         
-    grid : our grid
+    grid : previously initialized grid
     size : size of the grid
-    w: transition function values
+    w : transition function values array
 
     Returns: grid after cycle
     '''
@@ -108,23 +102,22 @@ def cycle(grid, size, w):
 def ising(size, num_cycles, t, h, grid_option=None, initial_state = -1, 
           statistics = True):
     '''
-    Performs n cycles and calculates the magnetic momentum and energy in each, 
-    storinging them.
+    Performs n cycles and calculates the magnetic momentum and energy
+    in each, storing them in arrays.
     Calculates the energy by creating a grid where each point contains the 
     sum_neib of that point in the original grid, and uses the grids for the 
-    calculation of the energy at each point
+    calculation of the energy on each point
     
     size : size of the grid
-    num_cycles : number of cycles we do
-    t : reduced temperature
-    h : reduced external magnetic field
-    grid option: if we want to start the grid in the previous configuration 
+    num_cycles : number of cycles to be done
+    grid option : if we want to start the grid in the previous configuration 
     when changing temperature
-    inicial_state: inicial spin orientation
-    flag: needed because we cant properly see the hysteresis cycle if working 
-    with absolute values
-    
-    Change for 3D: size**3. Roll the grid in 3rd dimension
+    initial_state : initial spin orientation for the whole grid
+    statistics : True for Curie temperature and False for hysteresis because for 
+    hysteresis, the signed value for the total magnetic momentum must be used 
+    and also there is no need to calculate the total energy
+    t, h : arguments to be passed to the transitionFunctionValues() function
+    only
     
     Returns: final grid, the array containing the magnetic momenta in each 
     cycle, and the array containing the total energy in each cycle
@@ -172,19 +165,17 @@ def ising(size, num_cycles, t, h, grid_option=None, initial_state = -1,
 # %%
 def curie_temp(size, num_cycles, h, start_n, temperatures, independent):
     '''
-    Performs a simulation on each temperature value. For each simulation it 
-    stores the relevant variables in an array (average magnetic_momentum, 
-    average energy, susceptibility, heat capacity)
+    Performs an ising simulation on each temperature value, at a fixed external
+    field value. For each simulation it stores the relevant variables in an 
+    array (average magnetic_momentum, average energy, susceptibility, heat 
+    capacity).
     
-    size : grid size
-    num_cycles : number of cycles per temperature
-    h : reduced external magnetic field
-    start_n : number of cycles we reject to calculate the mean
-    temperatures: array containing the temperatures to use
-    indepedent: if 1 makes it so that the starting grid on a new temperature is
-    the last grid from previous temperature
-
-    Changes for 3D: size**3
+    size : size of the grid
+    start_n : number of initial cycles we reject to calculate the mean
+    temperatures : array containing the reduced temperatures to use
+    independent : if False, the starting grid on a new temperature is the last
+    grid from the simulation of the previous temperature
+    num_cycles, h : arguments to be passed to the ising() function only
 
     Returns: lists of magnetic_momentum, energy, susceptibility, heat capacity
     at each temperature
@@ -197,8 +188,8 @@ def curie_temp(size, num_cycles, h, start_n, temperatures, independent):
     
     grid_option = None
     
-    i = 0
-    for t in temperatures:
+    for i in range(points):
+        t = temperatures[i]
         grid, mag_momentum, energy = ising(size, num_cycles, t, h, grid_option) 
         
         mag_momentum_m = mag_momentum[start_n:].mean()
@@ -210,7 +201,6 @@ def curie_temp(size, num_cycles, h, start_n, temperatures, independent):
         energy_list[i] = energy_m
         sus_list[i] = sus
         cap_list[i] = cap
-        i+=1
         
         if independent == False:
             grid_option = grid
@@ -224,15 +214,18 @@ def plotting_curie_temp(size, num_cycles, h, start_n, temperatures,
                         independent = True):
     '''
     Plots the relevant variables for each temperature.
+    
+    temperatures : array containing the reduced temperatures to use as x axis
+    size, num_cycles, h, start_n, independent : arguments to be passed to the
+    curie_temp() function only
     '''
     mag_list, energy_list, sus_list, cap_list = \
     curie_temp(size, num_cycles, h, start_n, temperatures, 
                independent)
     
-    
     index = np.argmax(sus_list)
     curie_t = temperatures[index]
-    print("Curie Temperature:", curie_t)
+    print("Curie Temperature:", round(curie_t, 1))
     
     fig, axs = plt.subplots(2, 2)
     labels = ['magnetic momentum', 'energy', 'magnetic susceptibility',
@@ -255,9 +248,12 @@ def hysteresis(fields, size, num_cycles, temperatures, start_n, independent):
     Performs a simulation on each field value. For each simulation it stores 
     the average magnetic_momentum
     
-    fields : array containing the fields to use
-    indepedent: if 1 makes it so that the starting grid on a new field is the 
-    last grid from previous field
+    fields : array containing the reduced fields to use
+    temperatures : reduced temperatures to be used to make each hysteresis plot
+    start_n : number of initial cycles we reject to calculate the mean
+    independent : if False, the starting grid on a new temperature is the last
+    grid from the simulation of the previous temperature
+    size, num_cycles : arguments to be passed to the ising() function only
 
     Returns: list of magnetic momenta for the different fields
     '''
@@ -292,13 +288,19 @@ def plotting_hysteresis(fields, size, num_cycles, temperatures, start_n,
                         independent = True):
     '''
     Plots the magnetic momentum as a function of the external field, for 
-    different temperatures.
+    different temperatures, representing different hysteresis cycles.
+    
+    fields : reduced external fields to be used as x axis
+    temperatures : different reduced temperatures to plot each hysteresis cycle
+    size, num_cycles, start_n, independent : arguments to be passed to the 
+    hysteresis() function only
     '''
     fig, ax = plt.subplots()
     
     mag_lists = hysteresis(fields, size, num_cycles, temperatures, start_n, 
                            independent)
-    for i, t in enumerate(temperatures):
+    
+    for i in range(temperatures.size):
         mag_list = mag_lists[i]
         ax.plot(fields, mag_list, label=f'Temperature {i+1}')
 
@@ -314,8 +316,9 @@ def plotting_hysteresis(fields, size, num_cycles, temperatures, start_n,
 def main():
     
     grid_size = 10
-    ncycles = 100
-    start_n = 10
+    #start_n = 10 * grid_size
+    start_n = 0
+    ncycles = 10
     
     temperatures = np.arange(0.1, 9, 0.1)
     h = 0
@@ -326,15 +329,13 @@ def main():
     hysteresis_temperatures = np.arange(2, 7, 1)
     
     independent = True
-    
-    if __name__ == "__main__":
         
-        plotting_curie_temp(grid_size, ncycles, h, start_n, temperatures, 
-                            independent)
-        plotting_hysteresis(external_fields, grid_size, ncycles, 
-                            hysteresis_temperatures, start_n, independent)
-        end_time = time.time()
-        print("Runtime:", end_time - start_time, "seconds")
+    plotting_curie_temp(grid_size, ncycles, h, start_n, temperatures, 
+                        independent)
+    plotting_hysteresis(external_fields, grid_size, ncycles, 
+                        hysteresis_temperatures, start_n, independent)
+    end_time = time.time()
+    print("Runtime:", end_time - start_time, "seconds")
 
 
 
